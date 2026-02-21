@@ -1,0 +1,3 @@
+babelfish_engine_translategemma.api_type string ollama
+babelfish_engine_translategemma.serviceurl string http://localhost:11434/api/generate
+babelfish_engine_translategemma.model string translategemma
