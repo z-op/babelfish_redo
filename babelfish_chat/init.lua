@@ -57,7 +57,8 @@ local function process(name, message, channel)
 
         for lang, players in pairs(targets) do
             babelfish.translate(source, lang, targetphrase, function(succeed, translated, detected)
-                if not succeed or detected == lang or targetphrase == translated then
+                if not succeed or detected == lang
+                    or string.lower(string.trim(targetphrase)) == string.lower(string.trim(translated)) then
                     return
                 end
 
@@ -158,7 +159,12 @@ else
         return core.chat_send_all(core.format_chat_message(name,
             string.format(format_base, sourcelang, targetlang, translated)))
     end
-    core.register_on_chat_message(process)
+    core.register_on_chat_message(function(name, message)
+        if not core.check_player_privs(name, { shout = true }) then
+            return false
+        end
+        process(name, message)
+    end)
 
     core.register_chatcommand("bb", {
         description = S("Translate a sentence and transmit it to everybody"),
