@@ -152,12 +152,117 @@ local function translate(source, target, query, callback)
 end
 
 local mt_language_map = {
+    -- Existing specific overrides
     ["es_US"] = "es",
     ["lzh"] = "zh_HANT",
     ["zh_CN"] = "zh",
     ["zh_TW"] = "zh_HANT",
     ["sr_Cyrl"] = "sr",
     ["sr_Latn"] = "sr",
+
+    -- Russian
+    ["ru_RU"] = "ru",
+
+    -- English variants
+    ["en_US"] = "en",
+    ["en_GB"] = "en",
+    ["en_AU"] = "en",
+    ["en_CA"] = "en",
+
+    -- European languages
+    ["de_DE"] = "de",
+    ["de_AT"] = "de",
+    ["de_CH"] = "de",
+    ["fr_FR"] = "fr",
+    ["fr_CA"] = "fr",
+    ["fr_CH"] = "fr",
+    ["fr_BE"] = "fr",
+    ["it_IT"] = "it",
+    ["it_CH"] = "it",
+    ["es_ES"] = "es",
+    ["es_MX"] = "es",
+    ["es_AR"] = "es",
+    ["es_CO"] = "es",
+    ["pt_PT"] = "pt",
+    ["pt_BR"] = "pt",
+    ["nl_NL"] = "nl",
+    ["nl_BE"] = "nl",
+    ["pl_PL"] = "pl",
+    ["uk_UA"] = "uk",
+    ["cs_CZ"] = "cs",
+    ["sk_SK"] = "sk",
+    ["hu_HU"] = "hu",
+    ["ro_RO"] = "ro",
+    ["bg_BG"] = "bg",
+    ["hr_HR"] = "hr",
+    ["sr_RS"] = "sr",
+    ["sl_SI"] = "sl",
+    ["et_EE"] = "et",
+    ["lv_LV"] = "lv",
+    ["lt_LT"] = "lt",
+    ["el_GR"] = "el",
+    ["fi_FI"] = "fi",
+    ["sv_SE"] = "sv",
+    ["da_DK"] = "da",
+    ["no_NO"] = "no",
+    ["nb_NO"] = "no",
+    ["nn_NO"] = "no",
+    ["tr_TR"] = "tr",
+    ["sq_AL"] = "sq",
+    ["bs_BA"] = "bs",
+    ["ca_ES"] = "ca",
+    ["eu_ES"] = "eu",
+    ["gl_ES"] = "gl",
+    ["cy_GB"] = "cy",
+    ["mt_MT"] = "mt",
+
+    -- Asian and Middle Eastern languages
+    ["ja_JP"] = "ja",
+    ["ko_KR"] = "ko",
+    ["zh_HK"] = "zh_HANT", -- Hong Kong usually uses Traditional
+    ["zh_SG"] = "zh",      -- Singapore uses Simplified
+    ["ar_SA"] = "ar",
+    ["ar_EG"] = "ar",
+    ["ar_AE"] = "ar",
+    ["he_IL"] = "he",
+    ["hi_IN"] = "hi",
+    ["bn_BD"] = "bn",
+    ["bn_IN"] = "bn",
+    ["fa_IR"] = "fa",
+    ["ur_PK"] = "ur",
+    ["ta_IN"] = "ta",
+    ["te_IN"] = "te",
+    ["mr_IN"] = "mr",
+    ["gu_IN"] = "gu",
+    ["kn_IN"] = "kn",
+    ["ml_IN"] = "ml",
+    ["pa_IN"] = "pa",
+    ["pa_PK"] = "pa",
+    ["th_TH"] = "th",
+    ["vi_VN"] = "vi",
+    ["id_ID"] = "id",
+    ["ms_MY"] = "ms",
+    ["tl_PH"] = "tl",
+    ["sw_KE"] = "sw",
+    ["ne_NP"] = "ne",
+    ["si_LK"] = "si",
+    ["my_MM"] = "my", -- Burmese
+    ["km_KH"] = "km", -- Khmer
+    ["lo_LA"] = "lo", -- Lao
+
+    -- Other supported languages
+    ["af_ZA"] = "af",
+    ["am_ET"] = "am",
+    ["hy_AM"] = "hy",
+    ["az_AZ"] = "az",
+    ["be_BY"] = "be",
+    ["ka_GE"] = "ka",
+    ["kk_KZ"] = "kk",
+    ["ky_KG"] = "ky",
+    ["tg_TJ"] = "tg",
+    ["tk_TM"] = "tk",
+    ["uz_UZ"] = "uz",
+    ["mn_MN"] = "mn",
 }
 
 babelfish.register_engine({

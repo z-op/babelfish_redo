@@ -694,13 +694,107 @@ local function translate(source, target, query, callback)
 end
 
 -- Minetest to TranslateGemma language code mapping
+-- Maps common locale codes (e.g., ru_RU, de_DE) to engine codes (e.g., ru, de)
 local mt_language_map = {
+    -- Existing / Specific overrides
     ["es_US"] = "es",
     ["lzh"] = "zh",
     ["zh_CN"] = "zh",
     ["zh_TW"] = "zh",
     ["sr_Cyrl"] = "sr",
     ["sr_Latn"] = "sr",
+
+    -- Russian
+    ["ru_RU"] = "ru",
+
+    -- English variants
+    ["en_US"] = "en",
+    ["en_GB"] = "en",
+
+    -- European languages
+    ["de_DE"] = "de",
+    ["de_AT"] = "de",
+    ["de_CH"] = "de",
+    ["fr_FR"] = "fr",
+    ["fr_CA"] = "fr",
+    ["fr_CH"] = "fr",
+    ["it_IT"] = "it",
+    ["it_CH"] = "it",
+    ["es_ES"] = "es",
+    ["es_MX"] = "es",
+    ["es_AR"] = "es",
+    ["pt_PT"] = "pt",
+    ["pt_BR"] = "pt",
+    ["nl_NL"] = "nl",
+    ["nl_BE"] = "nl",
+    ["pl_PL"] = "pl",
+    ["uk_UA"] = "uk",
+    ["cs_CZ"] = "cs",
+    ["sk_SK"] = "sk",
+    ["hu_HU"] = "hu",
+    ["ro_RO"] = "ro",
+    ["bg_BG"] = "bg",
+    ["hr_HR"] = "hr",
+    ["sr_RS"] = "sr", -- Serbian (Cyrillic)
+    ["sl_SI"] = "sl",
+    ["et_EE"] = "et",
+    ["lv_LV"] = "lv",
+    ["lt_LT"] = "lt",
+    ["el_GR"] = "el",
+    ["fi_FI"] = "fi",
+    ["sv_SE"] = "sv",
+    ["da_DK"] = "da",
+    ["no_NO"] = "no",
+    ["nb_NO"] = "no", -- Norwegian Bokmål
+    ["nn_NO"] = "no", -- Norwegian Nynorsk
+    ["tr_TR"] = "tr",
+    ["sq_AL"] = "sq", -- Albanian
+    ["bs_BA"] = "bs", -- Bosnian
+    ["ca_ES"] = "ca", -- Catalan
+    ["eu_ES"] = "eu", -- Basque
+    ["gl_ES"] = "gl", -- Galician
+    ["mt_MT"] = "mt", -- Maltese (if supported by model, else remove)
+    ["cy_GB"] = "cy", -- Welsh
+
+    -- Asian and Middle Eastern languages
+    ["ja_JP"] = "ja",
+    ["ko_KR"] = "ko",
+    ["zh_HK"] = "zh",
+    ["zh_SG"] = "zh",
+    ["ar_SA"] = "ar",
+    ["ar_EG"] = "ar",
+    ["he_IL"] = "he",
+    ["hi_IN"] = "hi",
+    ["bn_BD"] = "bn", -- Bengali (Bangladesh)
+    ["bn_IN"] = "bn", -- Bengali (India)
+    ["fa_IR"] = "fa", -- Persian
+    ["ur_PK"] = "ur", -- Urdu
+    ["ta_IN"] = "ta", -- Tamil
+    ["te_IN"] = "te", -- Telugu
+    ["mr_IN"] = "mr", -- Marathi
+    ["gu_IN"] = "gu", -- Gujarati
+    ["kn_IN"] = "kn", -- Kannada
+    ["ml_IN"] = "ml", -- Malayalam
+    ["pa_IN"] = "pa", -- Punjabi (Gurmukhi)
+    ["pa_PK"] = "pa", -- Punjabi (Shahmukhi, might map differently but usually 'pa' covers broad)
+    ["th_TH"] = "th",
+    ["vi_VN"] = "vi",
+    ["id_ID"] = "id",
+    ["ms_MY"] = "ms", -- Malay
+    ["tl_PH"] = "tl", -- Tagalog
+    ["sw_KE"] = "sw", -- Swahili
+    ["ne_NP"] = "ne", -- Nepali
+    ["si_LK"] = "si", -- Sinhala
+
+    -- Other regions
+    ["af_ZA"] = "af", -- Afrikaans
+    ["am_ET"] = "am", -- Amharic
+    ["hy_AM"] = "hy", -- Armenian
+    ["az_AZ"] = "az", -- Azerbaijani
+    ["be_BY"] = "be", -- Belarusian
+    ["ka_GE"] = "ka", -- Georgian
+    ["kk_KZ"] = "kk", -- Kazakh (Note: not in supported list, but good practice to map if model updates)
+    ["uz_UZ"] = "uz", -- Uzbek
 }
 
 babelfish.register_engine({
