@@ -241,8 +241,17 @@ end
 local function build_translation_prompt(source, target, query)
     local source_lang = language_names[source] or source
     local target_lang = language_names[target] or target
+
+-- Add context: this is a game chat (Minetest).
+-- Instruct the model to expect slang and informal communication.
+-- Prohibit profanity.
     return string.format(
-        "Translate the following text from %s to %s. Provide only the translation, no explanations:\n\n%s",
+        "Context: You are translating in-game chat messages for a multiplayer voxel sandbox game (Minetest). " ..
+        "Keep game commands starting with '/' unchanged." ..
+        "Expect gaming slang, nicknames, and informal language. " ..
+        "Translate the following text from %s to %s. " ..
+        "Do not use profanity, offensive language, or swear words in the output. " ..
+        "Output ONLY the translation, nothing else:\n\n%s",
         source_lang, target_lang, query
     )
 end
@@ -270,6 +279,7 @@ end
 
 local function detect_language(query, callback)
     local prompt = string.format(
+		"Context: this is in-game chat messages for a multiplayer voxel sandbox game (Minetest). " ..
         "Identify the language of the following text. " ..
         "Reply ONLY with the ISO 639-1 language code (e.g., 'en', 'ru', 'de'). " ..
         "Do not add punctuation or explanations.\n\nText: %s",
