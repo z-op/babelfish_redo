@@ -8,7 +8,7 @@ local S = core.get_translator("babelfish_chat")
 
 local format_base
 babelfish.register_on_engine_ready(function()
-    format_base = "[" .. babelfish.get_engine_label() .. " %s -> %s]: %s"
+    format_base = "[%s -> %s]: %s"
 end)
 
 local parse_language_string = babelfish.parse_language_string

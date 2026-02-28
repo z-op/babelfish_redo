@@ -1,6 +1,6 @@
 # babelfish_engine_translategemma
 
-TranslateGemma engine for BabelFish Redo (Minetest mod)
+TranslateGemma engine for BabelFish Redo (Luanti mod)
 
 ## Description
 
@@ -8,7 +8,7 @@ This module provides a translation engine based on TranslateGemma - an open mach
 
 ## Installation
 
-1. Install the module in your Minetest server's `mods/` folder
+1. Install the module in your Luanti server's `mods/` folder
 2. Add `babelfish_engine_translategemma` to `secure.http_mods` in `minetest.conf`:
 
 ```conf
@@ -243,4 +243,4 @@ LGPL-3.0-or-later
 ## Authors
 
 - Original babelfish_engine_lingva: Tai "DuCake" Kedzierski, 1F616EMO
-- TranslateGemma adaptation: 2025
+- TranslateGemma adaptation: 2026 Eugeny aka Bad
