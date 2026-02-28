@@ -17,7 +17,8 @@ local language_alias = {}
 local ollama_info = {
     version = nil,
     model_info = nil,
-    gpu_enabled = nil,
+    gpu_enabled = "Unknown",
+    vram_checked = false, -- Flag to check VRAM only once per model load
 }
 
 -- Configuration
@@ -80,8 +81,62 @@ local function get_model_info_summary(model_info)
         end
         if #general > 0 then table.insert(summary, "general: {" .. table.concat(general, ", ") .. "}") end
     end
-    -- Simplified for brevity in logs
     return "{ " .. table.concat(summary, ", ") .. " }"
+end
+
+-- Function to check running models and their memory usage (VRAM vs RAM)
+local function check_ollama_vram_usage()
+    if api_type ~= "ollama" then return end
+
+    http.fetch({
+        url = get_ollama_base_url() .. "/api/ps",
+        method = "GET",
+        timeout = 2
+    }, function(res)
+        if res.succeeded and res.data then
+            local data = core.parse_json(res.data)
+            if data and data.models then
+                -- Iterate over running models to find ours
+                for _, m in ipairs(data.models) do
+                    -- Match by name (Ollama returns "name" field in /api/ps)
+                    if m.name == model_name or m.model == model_name or m.name:find("^" .. model_name) then
+                        local vram = m.size_vram or 0
+                        local total = m.size or 0
+
+                        local vram_str = format_bytes(vram)
+                        local total_str = format_bytes(total)
+
+                        core.log("action", "[babelfish_engine_translategemma] ========== Model Memory Usage ==========")
+                        core.log("action", "[babelfish_engine_translategemma] Model loaded: " .. m.name)
+                        core.log("action", string.format("[babelfish_engine_translategemma] Total Memory: %s | VRAM: %s", total_str, vram_str))
+
+                        if total > 0 then
+                            local percent = (vram / total) * 100
+                            if vram == 0 then
+                                core.log("action", "[babelfish_engine_translategemma] Mode: CPU Only (0% offloaded to GPU)")
+                                ollama_info.gpu_enabled = "CPU"
+                            elseif percent >= 99 then
+                                core.log("action", "[babelfish_engine_translategemma] Mode: Full GPU (100% offloaded)")
+                                ollama_info.gpu_enabled = "Full GPU"
+                            else
+                                core.log("action", string.format("[babelfish_engine_translategemma] Mode: Hybrid (%.1f%% offloaded to GPU)", percent))
+                                ollama_info.gpu_enabled = "Hybrid GPU/CPU"
+                            end
+                            -- Detailed layer info isn't strictly available via API, but size_vram implies layers offloaded.
+                            core.log("action", "[babelfish_engine_translategemma] Layers info: Offloaded memory indicates layer distribution in VRAM.")
+                        end
+                        core.log("action", "[babelfish_engine_translategemma] =====================================")
+                        ollama_info.vram_checked = true
+                        return -- Stop after finding our model
+                    end
+                end
+                -- If model not found in list (shouldn't happen immediately after request, but possible due to timing)
+                if not ollama_info.vram_checked then
+                     core.log("action", "[babelfish_engine_translategemma] Model not found in active list (might be unloading or timing issue).")
+                end
+            end
+        end
+    end)
 end
 
 local function log_ollama_startup_info()
@@ -94,11 +149,14 @@ local function log_ollama_startup_info()
     http.fetch({ url = get_ollama_base_url() .. "/api/version", method = "GET", timeout = 5 }, function(res)
         if res.succeeded then
             local data = core.parse_json(res.data)
-            if data then core.log("action", "[babelfish_engine_translategemma] Ollama version: " .. (data.version or "unknown")) end
+            if data then
+                ollama_info.version = data.version
+                core.log("action", "[babelfish_engine_translategemma] Ollama version: " .. (data.version or "unknown"))
+            end
         end
     end)
 
-    -- Model Info
+    -- Model Info (Static details)
     http.fetch({
         url = get_ollama_base_url() .. "/api/show",
         method = "POST",
@@ -111,9 +169,13 @@ local function log_ollama_startup_info()
             if data and data.details then
                  core.log("action", "[babelfish_engine_translategemma] Model format: " .. (data.details.format or "N/A"))
                  core.log("action", "[babelfish_engine_translategemma] Quantization: " .. (data.details.quantization_level or "N/A"))
+                 if data.details.family then
+                    core.log("action", "[babelfish_engine_translategemma] Model family: " .. data.details.family)
+                 end
             end
         end
     end)
+
     core.log("action", "[babelfish_engine_translategemma] =======================================")
 end
 
@@ -179,9 +241,17 @@ end
 local function build_translation_prompt(source, target, query)
     local source_lang = language_names[source] or source
     local target_lang = language_names[target] or target
-    -- Простой промпт, так как язык уже известен
+
+-- Add context: this is a game chat (Minetest).
+-- Instruct the model to expect slang and informal communication.
+-- Prohibit profanity.
     return string.format(
-        "Translate the following text from %s to %s. Provide only the translation, no explanations:\n\n%s",
+        "Context: You are translating in-game chat messages for a multiplayer voxel sandbox game (Minetest). " ..
+        "Keep game commands starting with '/' unchanged." ..
+        "Expect gaming slang, nicknames, and informal language. " ..
+        "Translate the following text from %s to %s. " ..
+        "Do not use profanity, offensive language, or swear words in the output. " ..
+        "Output ONLY the translation, nothing else:\n\n%s",
         source_lang, target_lang, query
     )
 end
@@ -204,11 +274,12 @@ local function parse_response(api_type, data)
 end
 
 -- ============================================================================
--- Language Detection (New function)
+-- Language Detection
 -- ============================================================================
 
 local function detect_language(query, callback)
     local prompt = string.format(
+		"Context: this is in-game chat messages for a multiplayer voxel sandbox game (Minetest). " ..
         "Identify the language of the following text. " ..
         "Reply ONLY with the ISO 639-1 language code (e.g., 'en', 'ru', 'de'). " ..
         "Do not add punctuation or explanations.\n\nText: %s",
@@ -218,7 +289,6 @@ local function detect_language(query, callback)
     local post_data
     local extra_headers = { "Content-Type: application/json" }
 
-    -- Build request based on API type
     if api_type == "ollama" then
         post_data = core.write_json({
             model = model_name,
@@ -241,7 +311,6 @@ local function detect_language(query, callback)
             temperature = 0.1
         })
     else
-        -- Fallback or HF
         post_data = core.write_json({ inputs = prompt, parameters = { max_new_tokens = 5 } })
     end
 
@@ -265,14 +334,6 @@ local function detect_language(query, callback)
                 if code then
                     code = code:lower()
                     core.log("action", "[babelfish_engine_translategemma] Detected language: " .. code)
-
-                    -- Anti-hallucination check
-                    if code == "en" then
-                         if query:find(string.char(208)) or query:find(string.char(209)) then
-                            core.log("warning", "[babelfish_engine_translategemma] Detection conflict: model says 'en' but Cyrillic found. Overriding to 'ru'.")
-                            code = "ru"
-                         end
-                    end
                     return callback(code)
                 end
             end
@@ -352,6 +413,21 @@ local function make_request(source, target, query, callback)
             return callback(false, S("JSON parse error"))
         end
 
+        -- Log Speed Stats (Optional, keeps previous functionality)
+        if api_type == "ollama" and data.eval_count and data.eval_duration then
+            local eval_duration_sec = data.eval_duration / 1e9
+            if eval_duration_sec > 0 then
+                local tokens_per_sec = data.eval_count / eval_duration_sec
+                -- Only log speed, mode is determined by VRAM check now
+                core.log("action", string.format("[babelfish_engine_translategemma] Inference speed: %.2f tokens/sec", tokens_per_sec))
+            end
+        end
+
+        -- Check VRAM usage after first successful request
+        if api_type == "ollama" and not ollama_info.vram_checked then
+            check_ollama_vram_usage()
+        end
+
         local translation = parse_response(api_type, data)
 
         if translation then
@@ -364,10 +440,57 @@ local function make_request(source, target, query, callback)
 end
 
 -- ============================================================================
+-- Client Language Helper
+-- ============================================================================
+
+-- Helper to guess language based on script to avoid AI detection if possible
+local function simple_script_check(text, lang_code)
+    -- Cyrillic check for Russian and other Cyrillic languages
+    if lang_code == "ru" or lang_code == "uk" or lang_code == "bg" or lang_code == "sr" then
+        if text:find(string.char(208)) or text:find(string.char(209)) then
+            return true
+        end
+    end
+
+    -- Basic Latin check (English, German, French, etc.)
+    -- Be careful: many languages use Latin script. We only return true if we are sure
+    -- it matches the expected alphabet in a trivial case.
+    if lang_code == "en" or lang_code == "de" or lang_code == "fr" then
+        -- Check if it's strictly ASCII (basic latin) for English mostly
+        -- This is a weak check, but helps with simple English messages
+        if not text:find("[\128-\255]") then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function get_client_language(player_name)
+    if not player_name then return nil end
+
+    -- Use core.get_player_information if available (MT 5.4+)
+    -- Note: This might not be available in all contexts or might need async handling in MT 5.x
+    -- But usually inside a chat message hook, the player is online.
+
+    local info = core.get_player_information(player_name)
+    if info and info.lang_code and info.lang_code ~= "" then
+        -- Normalize (e.g., en_US -> en)
+        local main_lang = info.lang_code:sub(1, 2):lower()
+        if language_codes[main_lang] then
+            return main_lang
+        end
+    end
+
+    return nil
+end
+
+-- ============================================================================
 -- Public API Function
 -- ============================================================================
 
-local function translate(source, target, query, callback)
+-- Added optional player_name argument
+local function translate(source, target, query, callback, player_name)
     if engine_status == "error" then return callback(false, S("Engine error while initializing."))
     elseif engine_status == "init" then return callback(false, S("Engine not yet initialized.")) end
 
@@ -376,9 +499,24 @@ local function translate(source, target, query, callback)
     if target == "zh_HANT" or target == "zh-tw" or target == "zh-hant" then target = "zh" end
 
     if source == "auto" then
+        -- Try to optimize detection using client language
+        local client_lang = get_client_language(player_name)
+
+        if client_lang and client_lang ~= target then
+            -- Heuristic: check if text script matches the client language
+            if simple_script_check(query, client_lang) then
+                core.log("action", string.format("[babelfish_engine_translategemma] Using client language '%s' for player '%s' (script match).", client_lang, player_name or "unknown"))
+                return make_request(client_lang, target, query, callback)
+            else
+                -- Script mismatch or unclear, fallback to AI detection but hint the client language
+                -- We log that we are falling back to detection
+                core.log("action", string.format("[babelfish_engine_translategemma] Client lang is '%s' but text script differs. Using AI detection.", client_lang))
+            end
+        end
+
+        -- Fallback to AI detection
         return detect_language(query, function(detected)
             if detected == target then
-                -- Optimization: Source is same as target, skip translation
                 return callback(true, query, detected)
             else
                 return make_request(detected, target, query, callback)
